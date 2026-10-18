@@ -105,6 +105,6 @@ export function openStory(id) {
     formEl: $('#story-comment-form'),
     emptyHTML: `<p class="empty-state">還沒有人留言，寫下第一句給 ${e(s.name)} 的話吧。</p>`,
     renderItem: (m, report) =>
-      `<article><small>${e(m.name)}${m.created_at ? ' · ' + e(formatDate(m.created_at)) : ''}</small><p>${e(m.message)}</p>${report}</article>`,
+      `<article class="story-comment"><small>${e(m.name)}${m.created_at ? ' · ' + e(formatDate(m.created_at)) : ''}</small><p>${e(m.message)}</p>${report}</article>`,
   });
 }

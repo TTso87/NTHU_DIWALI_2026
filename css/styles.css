@@ -1220,8 +1220,12 @@ dialog::backdrop {
   padding: 4px 12px;
 }
 .report-form button.gold {
-  color: var(--gold);
-  border-color: #eac18c80;
+  background: var(--gold);
+  color: #211c1a;
+  border-color: var(--gold);
+}
+.report-form button.gold:hover {
+  background: #f7d8ad;
 }
 .hp-field {
   position: absolute;
