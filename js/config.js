@@ -10,5 +10,5 @@
 //
 // 兩個值留空時，留言板會停用並顯示示例留言，網站其他功能不受影響。
 
-export const SUPABASE_URL = '';
-export const SUPABASE_PUBLISHABLE_KEY = '';
+export const SUPABASE_URL = 'https://xjtsfgqltajcrctdkbcj.supabase.co';
+export const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_DHs_PqkXYqPPfEFlDy5fXw_tVUVb82c';
