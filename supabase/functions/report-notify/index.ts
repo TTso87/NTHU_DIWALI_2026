@@ -1,4 +1,5 @@
 // Supabase Edge Function：有人檢舉留言時，寄 Gmail 通知管理員。
+// （留言在檢舉當下已由資料庫自動隱藏，這封信讓管理員決定刪除或恢復。）
 //
 // 觸發方式：Database Webhook（public.reports 新增一列）→ POST 到這個函式。
 // 需要在 Supabase → Edge Functions → Secrets 設定：
@@ -46,13 +47,13 @@ function threadLabel(thread: string) {
 }
 
 type Report = { id: number; message_id: string; reason: string; detail: string; created_at: string };
-type Message = { id: string; thread: string; topic: string | null; name: string; message: string; hidden: boolean; created_at: string };
+type Message = { id: string; thread: string; topic: string | null; name: string; message: string; hidden: boolean; keep: boolean; created_at: string };
 
 async function loadContext(report: Report) {
   try {
     const db = createClient(SUPABASE_URL, env('SUPABASE_SERVICE_ROLE_KEY'), { auth: { persistSession: false } });
     const [{ data: message }, { count }] = await Promise.all([
-      db.from('messages').select('id,thread,topic,name,message,hidden,created_at').eq('id', report.message_id).maybeSingle(),
+      db.from('messages').select('id,thread,topic,name,message,hidden,keep,created_at').eq('id', report.message_id).maybeSingle(),
       db.from('reports').select('id', { count: 'exact', head: true }).eq('message_id', report.message_id),
     ]);
     return { message: message as Message | null, count: count ?? 1 };
@@ -65,7 +66,9 @@ async function loadContext(report: Report) {
 function buildMail(report: Report, message: Message | null, count: number) {
   const projectRef = SUPABASE_URL ? new URL(SUPABASE_URL).hostname.split('.')[0] : '';
   const lines = [
-    '有觀眾檢舉了一則留言，請到 Supabase 後台確認是否需要刪除。',
+    message?.keep
+      ? '有觀眾檢舉了一則你先前標記為「沒問題（keep）」的留言，所以這次沒有自動隱藏，請再確認一次。'
+      : '有觀眾檢舉了一則留言，系統已「自動隱藏」，網站上暫時看不到。請確認後決定刪除或恢復。',
     '',
     `檢舉原因：${report.reason}`,
     `補充說明：${report.detail || '（無）'}`,
@@ -78,7 +81,7 @@ function buildMail(report: Report, message: Message | null, count: number) {
       `位置：${threadLabel(message.thread)}${message.topic ? ` · ${message.topic}` : ''}`,
       `暱稱：${message.name}`,
       `時間：${message.created_at}`,
-      `目前狀態：${message.hidden ? '已隱藏' : '公開中'}`,
+      `目前狀態：${message.hidden ? '已隱藏' : '公開中'}${message.keep ? '（已標記 keep）' : ''}`,
       '內容：',
       message.message,
     );
@@ -88,18 +91,20 @@ function buildMail(report: Report, message: Message | null, count: number) {
   lines.push(
     '',
     '── 處理方式 ──',
-    `1. 開啟 https://supabase.com/dashboard/project/${projectRef}/editor ，選 messages 表`,
-    `2. 找到 id = ${report.message_id} 的那一列，刪除（或把 hidden 勾起來）`,
+    `後台表格：https://supabase.com/dashboard/project/${projectRef}/editor （選 messages 表，找 id = ${report.message_id}）`,
     '',
-    '或在 SQL Editor 執行：',
+    '▸ 確實違規 → 刪除該列，或在 SQL Editor 執行：',
     `delete from public.messages where id = '${report.message_id}';`,
+    '',
+    '▸ 檢舉不成立 → 恢復顯示，並標記 keep（之後再被檢舉只寄信、不會自動隱藏）：',
+    `update public.messages set hidden = false, keep = true where id = '${report.message_id}';`,
     '',
     '（這封信由 Light Across Home 留言板自動寄出）',
   );
   return {
     from: `Light Across Home 留言板 <${GMAIL_USER}>`,
     to: ADMIN_EMAIL,
-    subject: `【留言檢舉】${report.reason}：${message ? oneLine(message.name) + ' 的留言' : report.message_id}`,
+    subject: `【留言檢舉・${message?.keep ? '未隱藏' : '已自動隱藏'}】${report.reason}：${message ? oneLine(message.name) + ' 的留言' : report.message_id}`,
     // 純文字信件：留言內容不會被當成 HTML 執行
     text: lines.join('\n'),
   };

@@ -86,10 +86,14 @@ create table if not exists public.messages (
   topic text check (topic in ('祝福', '家的記憶', '提問')),
   name text not null check (char_length(name) between 1 and 24),
   message text not null check (char_length(message) between 1 and 300),
-  hidden boolean not null default false, -- 管理員勾選後就不會顯示
+  hidden boolean not null default false, -- true = 不顯示（被檢舉時自動設為 true）
+  keep boolean not null default false,   -- 管理員確認沒問題後設 true：之後的檢舉只寄信、不再自動隱藏
   author_hash text not null,             -- 只用來限流，不對外公開
   created_at timestamptz not null default now()
 );
+-- 舊版資料表升級用（第一次執行時這行什麼都不做）
+alter table public.messages add column if not exists keep boolean not null default false;
+
 create index if not exists messages_thread_idx on public.messages (thread, created_at desc) where not hidden;
 create index if not exists messages_author_idx on public.messages (author_hash, created_at);
 create index if not exists messages_created_idx on public.messages (created_at);
@@ -107,6 +111,7 @@ create policy "visitors read visible messages"
 
 -- ---------------------------------------------------------------------
 -- 檢舉（訪客完全無法讀寫；新增一列時由 Database Webhook 觸發 Gmail 通知）
+-- 被檢舉的留言會「立即隱藏」，管理員收到信後再決定刪除或恢復。
 -- ---------------------------------------------------------------------
 create table if not exists public.reports (
   id bigint generated always as identity primary key,
@@ -200,7 +205,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 檢舉留言
+-- 檢舉留言：記錄檢舉，並立即隱藏該留言（除非管理員已標記 keep）
 -- 限制：同一來源對同一則只算一次；同一來源 10 分鐘最多 5 次；全站 1 小時最多 30 次
 -- （也就是管理員信箱 1 小時最多收到 30 封通知）
 -- ---------------------------------------------------------------------
@@ -246,7 +251,10 @@ begin
   insert into public.reports (message_id, reason, detail, reporter_hash)
   values (p_message_id, p_reason, v_detail, v_hash);
 
-  return json_build_object('ok', true);
+  -- 先下架再說：管理員收到信後決定刪除，或改回 hidden = false 並勾 keep
+  update public.messages set hidden = true where id = p_message_id and not keep;
+
+  return json_build_object('ok', true, 'hidden', found);
 end;
 $$;
 

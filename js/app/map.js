@@ -3,7 +3,8 @@
 import { $, $$, escapeHTML as e } from '../lib/dom.js';
 import { safeURL } from '../lib/content.js';
 import { state } from './state.js';
-import { openStory } from './stories.js';
+import { t } from '../i18n/index.js';
+import { openStory, placeLabel } from './stories.js';
 
 const HOME_CENTER = [360, 340];
 let mapZoom = 1;
@@ -59,7 +60,7 @@ export function drawMarkers() {
   $('#map-markers').innerHTML = visibleStories()
     .map(s => {
       const [x, y] = project(s.coordinates);
-      return `<g class="map-marker ${s.id === selected ? 'active' : ''}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="${e(s.city)}：${e(s.name)}的故事" data-story="${e(s.id)}"><circle class="pulse" r="18"/><circle class="core" r="5"/><text x="13" y="-13">${e(s.city)}</text></g>`;
+      return `<g class="map-marker ${s.id === selected ? 'active' : ''}" transform="translate(${x},${y})" role="button" tabindex="0" aria-label="${e(t('map.markerAria', { city: s.city, name: s.name }))}" data-story="${e(s.id)}"><circle class="pulse" r="18"/><circle class="core" r="5"/><text x="13" y="-13">${e(s.city)}</text></g>`;
     })
     .join('');
   $$('.map-marker').forEach(m => {
@@ -80,11 +81,11 @@ function portrait(s) {
 
 export function renderStories() {
   const stories = visibleStories();
-  $('#map-count').textContent = stories.length + ' 個故事入口';
+  $('#map-count').textContent = t('map.count', { count: stories.length });
   $('#story-list').innerHTML = stories
     .map(
       s =>
-        `<button class="story-card ${s.id === selected ? 'active' : ''}" data-id="${e(s.id)}"><span class="portrait-letter">${portrait(s)}</span><span><small>${e(s.cityEn)} · ${e(s.city)}</small><strong>${e(s.name)}</strong><p>${e(s.quote)}</p></span><span class="card-open">＋</span></button>`,
+        `<button class="story-card ${s.id === selected ? 'active' : ''}" data-id="${e(s.id)}"><span class="portrait-letter">${portrait(s)}</span><span><small>${e(placeLabel(s, ' · '))}</small><strong>${e(s.name)}</strong><p>${e(s.quote)}</p></span><span class="card-open">＋</span></button>`,
     )
     .join('');
   $$('.story-card').forEach(b => (b.onclick = () => selectStory(b.dataset.id, false)));
@@ -105,20 +106,35 @@ function selectStory(id, zoom) {
   const endCenter = project(s.coordinates);
   const start = performance.now();
   const animate = now => {
-    const t = Math.min(1, (now - start) / 480);
-    const ease = 1 - Math.pow(1 - t, 3);
+    const p = Math.min(1, (now - start) / 480);
+    const ease = 1 - Math.pow(1 - p, 3);
     mapCenter = startCenter.map((v, i) => v + (endCenter[i] - v) * ease);
     mapZoom = startZoom + (1.5 - startZoom) * ease;
     updateView();
-    if (t < 1) requestAnimationFrame(animate);
+    if (p < 1) requestAnimationFrame(animate);
     else openStory(id);
   };
   requestAnimationFrame(animate);
 }
 
-export function initMap() {
+// 主題篩選選單（主題文字會隨語言改變，所以每次都重建）
+function renderThemeFilter() {
   const themes = [...new Set(state.content.stories.map(s => s.theme))];
-  $('#theme-filter').innerHTML += themes.map(t => `<option value="${e(t)}">${e(t)}</option>`).join('');
+  $('#theme-filter').innerHTML =
+    `<option value="all">${e(t('map.filterAll'))}</option>` +
+    themes.map(theme => `<option value="${e(theme)}">${e(theme)}</option>`).join('');
+}
+
+// 切換語言後：重建選單、清單與光點
+export function refreshMapLanguage() {
+  renderThemeFilter();
+  resetView();
+  renderStories();
+  drawMarkers();
+}
+
+export function initMap() {
+  renderThemeFilter();
   renderStories();
   $('#theme-filter').onchange = () => {
     resetView();

@@ -3,7 +3,8 @@
 import { $ } from '../lib/dom.js';
 import { store } from '../lib/storage.js';
 
-export const state = { content: null };
+// raw：data/content.json 原始資料；content：目前語言版本（切換語言時重新產生）
+export const state = { raw: null, content: null };
 
 const savedProgress = store.read('progress', {});
 export const progress = Object.fromEntries(

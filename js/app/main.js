@@ -1,38 +1,46 @@
-// 展覽首頁進入點：載入內容後，依序啟動各區塊。
+// 展覽首頁進入點：載入內容後，依序啟動各區塊；並處理中／英切換。
 
 import { $, escapeHTML as e } from '../lib/dom.js';
 import { loadContent, loadJSON, safeURL, showLoadError, MAP_PATH } from '../lib/content.js';
+import { t, getLang, setLang, onLanguageChange, localizeContent, applyStaticText } from '../i18n/index.js';
 import { state, persist } from './state.js';
 import { initDialogs, openActivity } from './dialogs.js';
-import { initMap, drawMap, drawMarkers } from './map.js';
-import { openStory } from './stories.js';
+import { initMap, drawMap, drawMarkers, refreshMapLanguage } from './map.js';
+import { openStory, openStoryId } from './stories.js';
 import { renderCulture } from './culture.js';
-import { renderGames } from '../games/index.js';
-import { initWall } from './wall.js';
+import { renderGameCards } from '../games/host.js';
+import { initWall, redrawWall } from './wall.js';
 import { showCollection } from './collection.js';
 import { registerExhibitTools } from './webmcp.js';
 
-function applySiteText(site) {
+function applySiteText() {
+  const { site, stories } = state.content;
   document.title = site.title + '｜Light Across Home';
-  if (site.title !== '離家以後，我們一起點燈') $('h1').textContent = site.title;
+  $('meta[name="description"]').content = t('meta.description');
+  // 展覽名稱被改過才覆蓋大標題，否則保留有排版的預設標題
+  if (site.title !== t('site.defaultTitle')) $('h1').textContent = site.title;
   $('.hero-intro').textContent = site.intro;
   $('.hero-intro').style.whiteSpace = 'pre-line';
   const hero = safeURL(site.heroImage, { image: true });
   if (hero)
     $('.hero-image').style.backgroundImage =
       `linear-gradient(90deg,#10121cf0 0%,#10121ca6 37%,#10121c10 70%),linear-gradient(0deg,#10121c 0%,transparent 25%),url(${JSON.stringify(hero)})`;
-  const eventText = $('.interlude p:not(.eyebrow)');
-  eventText.textContent = site.eventText;
-  eventText.style.whiteSpace = 'pre-line';
-  if (new URLSearchParams(location.search).get('preview') === '1')
-    $('.demo-note').textContent = '策展草稿預覽 · 此版本僅在你的瀏覽器顯示';
-  else if (!state.content.stories.some(s => s.demo))
-    $('.demo-note').textContent = '以個人經驗為核心，由受訪者與共同策展者一起編輯。';
+  $('.interlude-text').textContent = site.eventText;
+  $('.interlude-text').style.whiteSpace = 'pre-line';
+  if (new URLSearchParams(location.search).get('preview') === '1') $('.demo-note').textContent = t('hero.demoNotePreview');
+  else if (!stories.some(s => s.demo)) $('.demo-note').textContent = t('hero.demoNoteReal');
+}
+
+function updateLangButton() {
+  const button = $('#lang-button');
+  button.textContent = t('lang.switch');
+  button.setAttribute('aria-label', t('lang.switchAria'));
+  button.lang = getLang() === 'en' ? 'zh-Hant' : 'en';
 }
 
 function showAbout() {
   openActivity(
-    `<p class="eyebrow">ABOUT THE EXHIBITION</p><h2>從一個人的故事開始。</h2><p style="white-space:pre-line">${e(state.content.site.about)}</p><p>地圖資料：<a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noopener noreferrer">Natural Earth · 公有領域地理資料</a>。地圖呈現採資料來源的邊界，僅用於家鄉定位。</p><p>收藏、創作與遊戲進度只儲存在你自己的瀏覽器；清除網站資料後會移除。留言會公開顯示給所有觀眾，如發現不當內容，請按留言旁的「檢舉」，管理員會收到通知並處理。</p>`,
+    `<p class="eyebrow">ABOUT THE EXHIBITION</p><h2>${e(t('about.title'))}</h2><p style="white-space:pre-line">${e(state.content.site.about)}</p><p>${t('about.map')}</p><p>${e(t('about.privacy'))}</p>`,
   );
 }
 
@@ -49,24 +57,44 @@ async function loadMap() {
     drawMap(geo);
   } catch (err) {
     drawMarkers();
-    showLoadError(err, '地圖底圖載入未完成；仍可從人物清單閱讀故事');
+    showLoadError(err, t('map.loadError'));
   }
+}
+
+// 切換語言：重新產生內容、重畫各區塊；開著的故事用新語言重開，開著的遊戲關閉
+function onLanguageSwitched() {
+  state.content = localizeContent(state.raw);
+  applyStaticText();
+  updateLangButton();
+  applySiteText();
+  refreshMapLanguage();
+  renderCulture();
+  renderGameCards();
+  redrawWall();
+  if ($('#activity-dialog').open) $('#activity-dialog').close();
+  const storyId = openStoryId();
+  if (storyId) openStory(storyId);
 }
 
 async function init() {
   initDialogs();
+  applyStaticText();
+  updateLangButton();
   try {
-    state.content = await loadContent();
+    state.raw = await loadContent();
   } catch (err) {
     showLoadError(err);
     return;
   }
-  applySiteText(state.content.site);
+  state.content = localizeContent(state.raw);
+  applySiteText();
   initMap();
   renderCulture();
-  renderGames();
+  renderGameCards();
   initWall();
   persist();
+  $('#lang-button').onclick = () => setLang(getLang() === 'en' ? 'zh' : 'en');
+  onLanguageChange(onLanguageSwitched);
   $('#collection-button').onclick = showCollection;
   $('#about-button').onclick = showAbout;
   window.addEventListener('hashchange', openStoryFromHash);

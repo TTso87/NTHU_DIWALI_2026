@@ -157,9 +157,28 @@ button {
   padding: 7px 17px;
   white-space: nowrap;
 }
-.collection-button span {
+.collection-button #collection-count {
   color: var(--gold);
   margin-left: 9px;
+}
+/* 右上角：語言切換 + 收藏 */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.lang-button {
+  background: none;
+  font-size: 13px;
+  letter-spacing: 0.08em;
+  border-radius: 30px;
+  padding: 7px 14px;
+  color: var(--gold);
+  border-color: #eac18c60;
+  white-space: nowrap;
+}
+.lang-button:hover {
+  background: #eac18c12;
 }
 .hero {
   min-height: 700px;
@@ -944,115 +963,11 @@ dialog::backdrop {
 .activity-toolbar select {
   width: auto;
 }
-.rangoli-canvas {
-  display: block;
-  max-width: 100%;
-  width: 460px;
-  height: auto;
-  margin: auto;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: #121823;
-}
-.rangoli-canvas .tile {
-  cursor: pointer;
-  transition: fill 0.15s;
-}
-.rangoli-canvas .tile:hover {
-  stroke: white;
-  stroke-width: 2;
-}
-.memory-board {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.memory-tile {
-  height: 94px;
-  background: #23263a;
-  color: var(--gold);
-  font-size: 22px;
-}
-.memory-tile.revealed {
-  background: #3a3040;
-}
-.memory-tile.matched {
-  background: #35453f;
-  border-color: #acc9b5;
-  color: #e3f2e8;
-}
 .game-status {
   font-size: 14px;
   color: var(--gold) !important;
   min-height: 25px;
   margin: 17px 0;
-}
-.question-options {
-  display: grid;
-  gap: 12px;
-  margin: 25px 0;
-}
-.question-options button {
-  text-align: left;
-  padding: 15px;
-}
-.question-options button.correct {
-  border-color: #9fc2a0;
-  background: #254035;
-}
-.question-options button.wrong {
-  border-color: #c19b8e;
-  background: #453131;
-}
-.sound-pads {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
-}
-.sound-pads button {
-  height: 115px;
-  font-size: 28px;
-  background: #30293e;
-}
-.sound-pads button.lit {
-  background: var(--gold);
-  color: var(--bg);
-  box-shadow: 0 0 30px #eac18c50;
-}
-.hunt-list {
-  list-style: none;
-  padding: 0;
-}
-.hunt-list li {
-  padding: 20px 0;
-  border-bottom: 1px solid var(--line);
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-}
-.hunt-list span {
-  font-size: 14px;
-  color: var(--muted);
-}
-.postcard-preview {
-  padding: 42px 25px;
-  text-align: center;
-  background: radial-gradient(ellipse at bottom, #72503a, #171e31 70%);
-  border: 1px solid #eac18c66;
-  margin: 20px 0;
-  overflow-wrap: anywhere;
-}
-.postcard-preview h3 {
-  color: var(--gold);
-  font-size: 25px;
-}
-.postcard-preview p {
-  font-family: var(--serif);
-  font-size: 20px;
-  white-space: pre-line;
-}
-.postcard-preview small {
-  color: var(--muted);
 }
 #toast {
   position: fixed;
@@ -1174,6 +1089,32 @@ dialog::backdrop {
   font-size: 14px;
   color: var(--muted);
   margin-bottom: 25px;
+}
+/* 編輯頁：編輯語言切換與中文對照 */
+.editor-lang {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.editor-lang button {
+  font-size: 13px;
+  border-radius: 30px;
+  padding: 5px 16px;
+}
+.editor-lang button.active {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+.editor-ref {
+  display: block;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-left: 2px solid #eac18c55;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-line;
 }
 /* 留言板：保留換行、檢舉按鈕與檢舉表單、防機器人隱藏欄位 */
 .message p,
@@ -1327,9 +1268,13 @@ dialog::backdrop {
   .brand small {
     letter-spacing: 1px;
   }
-  .collection-button {
+  .collection-button,
+  .lang-button {
     font-size: 12px;
     padding: 4px 12px;
+  }
+  .header-actions {
+    gap: 6px;
   }
   .hero {
     height: auto;
@@ -1511,21 +1456,6 @@ dialog::backdrop {
   }
   .activity-inner h2 {
     font-size: 27px;
-  }
-  .memory-board {
-    gap: 8px;
-  }
-  .memory-tile {
-    height: 75px;
-    font-size: 17px;
-    padding: 5px;
-  }
-  .sound-pads {
-    gap: 8px;
-  }
-  .sound-pads button {
-    height: 80px;
-    font-size: 22px;
   }
   .editor-layout {
     grid-template-columns: 1fr;
