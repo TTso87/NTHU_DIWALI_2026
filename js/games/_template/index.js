@@ -38,6 +38,7 @@ export default {
   },
 
   // 有同資料夾的 style.css 才設成 true（host 會自動載入）
+  // 需要圖片／音效：放在這個資料夾（例如 images/），用 ctx.asset('images/xxx.svg') 取網址（範例：memory/）
   styles: false,
 
   /**

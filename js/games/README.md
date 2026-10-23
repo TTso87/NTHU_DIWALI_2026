@@ -14,7 +14,8 @@ js/games/
   host.js            ← 主機：畫卡片、開視窗、建立 ctx、載入 style.css、關閉時清理（不要改）
   _template/         ← 新遊戲範本，複製它開始
   rangoli/  index.js  style.css    ← 每個遊戲一個資料夾
-  memory/   quiz/  rhythm/  hunt/  postcard/
+  memory/   index.js  style.css  images/*.svg   ← 需要圖片時放在自己的資料夾（範例）
+  quiz/  rhythm/  hunt/  postcard/
 ```
 
 流程：訪客點卡片 → `host.startGame(id)` → 打開互動視窗，產生空的 `root` 容器 → 呼叫遊戲的 `mount(root, ctx)` → 視窗關閉時執行遊戲回傳的清理函式。
@@ -54,6 +55,7 @@ export default {
 | `ctx.progress` | 唯讀副本：`{ visited: [人物 ID], saved: [人物 ID], games: [已完成遊戲 ID] }` |
 | `ctx.complete()` | 記錄「這個遊戲已體驗」（收藏頁統計會用到）；可重複呼叫 |
 | `ctx.store.read(key, fallback)` / `.write(key, value)` / `.remove(key)` | 存在訪客瀏覽器的資料，已自動加上遊戲專屬前綴，不會撞名 |
+| `ctx.asset(path)` | 遊戲資料夾內檔案的網址，例如 `ctx.asset('images/lamp.svg')`（圖片、音效用） |
 | `ctx.escapeHTML(text)` | 把外部文字（內容檔、訪客輸入）放進 `innerHTML` 前一定要先跳脫 |
 | `ctx.toast(message)` | 畫面下方的短暫提示 |
 | `ctx.download(filename, data, mimeType)` | 讓訪客下載檔案（`data` 可為字串或 Blob） |
@@ -72,9 +74,10 @@ export default {
    - 用 `root.querySelector('[data-role="..."]')` 找元素，**不要用 `id`**、不要用 `document.querySelector`。
    - 達成目標時呼叫 `ctx.complete()`。
    - 有 `setTimeout` / `setInterval` / `requestAnimationFrame` / `AudioContext` / `window` 事件時，回傳清理函式把它們全部停掉。
-5. **需要樣式時**：建立 `style.css`，`styles: true`。class 名稱加遊戲前綴（例如 `.lantern-sky`）避免影響別人。
-6. **註冊**：在 `registry.js` 加 `import lantern from './lantern/index.js';`，並把 `lantern` 放進 `GAMES` 陣列（陣列順序 = 卡片順序）。
-7. **測試**：照第 7 節檢查清單。
+5. **需要圖片或音效時**：照第 6 節放在遊戲資料夾內，用 `ctx.asset()` 取網址。
+6. **需要樣式時**：建立 `style.css`，`styles: true`。class 名稱加遊戲前綴（例如 `.lantern-sky`）避免影響別人。
+7. **註冊**：在 `registry.js` 加 `import lantern from './lantern/index.js';`，並把 `lantern` 放進 `GAMES` 陣列（陣列順序 = 卡片順序）。
+8. **測試**：照第 8 節檢查清單。
 
 修改既有遊戲時，只改該遊戲資料夾；文字一律改 `strings`，兩種語言都要改。
 
@@ -85,7 +88,7 @@ export default {
 - **安全**：
   - 來自 `ctx.content`、訪客輸入、網址的文字，放進 `innerHTML` 前用 `ctx.escapeHTML()`；或改用 `textContent`。
   - 不可使用 `eval`、`new Function`、`<script>`、行內事件屬性（`onclick="..."`）。用 `element.onclick = ...`。
-  - 不可載入外部 JS／CSS／字型（網站有 Content-Security-Policy，會被擋）。圖片可放 `assets/` 用相對路徑。
+  - 不可載入外部 JS／CSS／字型（網站有 Content-Security-Policy，會被擋）。圖片、音效放在自己的遊戲資料夾，用 `ctx.asset()`。
   - 不可呼叫留言板（Supabase）或任何外部 API。
 - **無障礙**：可點的東西用 `<button>`；非按鈕元素要可點時加 `tabindex="0" role="button" aria-label` 並處理 Enter／空白鍵；只用顏色表達的資訊要另外有文字。
 - **行動版**：390px 寬不能出現橫向捲軸；觸控目標至少約 44px。
@@ -94,7 +97,35 @@ export default {
 - **資料**：只存在 `ctx.store`；不要存個資。
 - **不要依賴其他遊戲**：遊戲之間不互相 import。共用的小工具直接寫在自己的檔案裡。
 
-## 6. 可直接使用的共用樣式
+## 6. 使用圖片與音效
+
+範例：`memory/`（記憶翻翻卡的卡面就是 `memory/images/*.svg`）。
+
+1. 把檔案放進自己的遊戲資料夾，例如 `js/games/lantern/images/lamp.svg`、`js/games/lantern/sounds/bell.mp3`。
+   - 圖片：SVG（線條圖示最清晰、檔案最小）、PNG、WebP、JPG；單張建議 200KB 以下。
+   - 音效：MP3 或 OGG，短音效 100KB 以下；只能在使用者點擊後播放，並提供靜音。
+   - 只放有授權、可公開使用的素材（自己畫的、AI 生成並確認可用的、或 CC0）。
+2. 用 `ctx.asset('images/lamp.svg')` 取得網址，**不要**寫死 `js/games/...` 路徑（網站搬家或改資料夾時會壞掉）。
+3. 每張圖片都要有替代文字，而且是雙語：把名稱放在 `strings`，`alt="${t('lamp')}"`。
+4. 會反覆顯示的圖片可先預載，避免翻牌或切換時閃爍：
+
+```js
+const ITEMS = [{ key: 'lamp', image: 'images/lamp.svg' }, { key: 'letter', image: 'images/letter.svg' }];
+
+mount(root, ctx) {
+  const { t } = ctx;
+  const faces = ITEMS.map(item => Object.assign(new Image(), { src: ctx.asset(item.image) })); // 預載
+  root.innerHTML = ITEMS.map((item, i) => `<img class="lantern-pic" src="${faces[i].src}" alt="${t(item.key)}">`).join('');
+  const bell = new Audio(ctx.asset('sounds/bell.mp3')); // 在按鈕 onclick 裡才 bell.play()
+  return () => bell.pause();
+}
+```
+
+5. 圖片尺寸用遊戲自己的 `style.css` 控制（例如 `.lantern-pic { width: 56px; height: 56px; }`），手機版在 `@media (max-width: 700px)` 縮小。
+
+想把現有遊戲的文字換成圖片（或反過來），只要改資料與畫出卡面的那一段，其餘邏輯不用動 —— 可以對照 `memory/index.js` 的 `ITEMS`、`showFace()`。
+
+## 7. 可直接使用的共用樣式
 
 這些 class 已在 `css/styles.css` 定義，遊戲可直接用，外觀會和其他遊戲一致：
 
@@ -109,7 +140,7 @@ export default {
 
 `<label>文字<input></label>` 會自動排成「標籤在上、欄位在下」。CSS 變數可用：`--gold`、`--text`、`--muted`、`--line`、`--surface`、`--panel`、`--serif`、`--sans`。
 
-## 7. 測試檢查清單
+## 8. 測試檢查清單
 
 本機啟動：在專案根目錄執行 `python3 -m http.server 8080`，打開 <http://localhost:8080/#play>。
 
@@ -121,7 +152,7 @@ export default {
 - [ ] 只用鍵盤（Tab / Enter）也能玩
 - [ ] 沒有修改 `host.js`、`index.html`、其他遊戲
 
-## 8. 常見錯誤
+## 9. 常見錯誤
 
 | 症狀 | 原因 |
 |---|---|
@@ -132,8 +163,9 @@ export default {
 | 關掉視窗聲音還在響 | 沒有回傳清理函式關閉 `AudioContext` / 計時器 |
 | 和別的遊戲樣式互相影響 | class 名稱沒有加遊戲前綴 |
 | 內容檔的文字出現奇怪符號或被當成 HTML | 沒有用 `ctx.escapeHTML()` |
+| 圖片顯示破圖 | 路徑寫錯或沒用 `ctx.asset()`；檔名大小寫要完全相同（GitHub Pages 區分大小寫） |
 
-## 9. 完整範例：點燈小遊戲
+## 10. 完整範例：點燈小遊戲
 
 ```js
 // js/games/lantern/index.js
