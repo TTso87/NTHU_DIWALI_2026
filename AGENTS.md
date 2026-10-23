@@ -11,6 +11,7 @@
 | 介面文字（按鈕、標題等）中英文 | `js/i18n/strings.js`（zh 與 en 要同時加同一個 key） |
 | 留言板、檢舉、資料庫 | `docs/SETUP-SUPABASE.md`、`docs/MODERATION.md`、`supabase/schema.sql` |
 | 檔案結構總覽 | `README.md` |
+| 給主辦人（非技術）的操作說明；改動流程時要同步更新 | `主辦人使用指南.md` |
 
 ## 共通規則
 

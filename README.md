@@ -2,6 +2,8 @@
 
 清華排燈節（Diwali）互動數位展覽網站。純靜態網頁（HTML + CSS + 原生 JavaScript 模組），放在 GitHub Pages；留言板資料存在 Supabase。
 
+> **主辦人／非技術人員請先看 [主辦人使用指南.md](主辦人使用指南.md)**：修改內容、上傳 content.json、處理檢舉、請 AI 擴充小遊戲。
+
 ## 檔案結構
 
 ```
@@ -27,6 +29,7 @@ docs/
   SETUP-SUPABASE.md   ★ 留言板設定步驟
   MODERATION.md       處理檢舉：刪除 / 恢復留言
   TRANSLATION.md      中英文內容與 AI 翻譯流程
+主辦人使用指南.md     ★ 給主辦人的白話操作指南
 AGENTS.md / CLAUDE.md 給 AI 助理的專案說明
 .claude/skills/mini-game/  讓 Claude Code 自動套用小遊戲指引
 ```

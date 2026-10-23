@@ -57,6 +57,8 @@ function createContext(game, root) {
         write: (key, value) => store.write(prefix + key, value),
         remove: key => store.remove(prefix + key),
       },
+      // 遊戲資料夾內檔案（圖片、音效）的網址，例如 ctx.asset('images/lamp.svg')
+      asset: path => new URL(`./${game.id}/${path}`, import.meta.url).href,
       complete: () => complete(game.id),
       escapeHTML: e,
       toast,

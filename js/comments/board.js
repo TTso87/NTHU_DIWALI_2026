@@ -1,6 +1,7 @@
 // 留言板 UI：首頁「點燈留言」與人物展間「想對 ○○ 說的話」共用。
 // 負責載入留言、送出表單、檢舉。外觀由呼叫端的 renderItem 決定。
-// 檢舉成功後資料庫會立即隱藏該留言，這裡也同步把它從畫面移除。
+// 檢舉成功後資料庫會立即隱藏該留言，這裡也同步把它從畫面移除；
+// 管理員已確認（keep）的留言不會被隱藏，改為提示訪客。
 
 import { $, escapeHTML as e, toast } from '../lib/dom.js';
 import { store } from '../lib/storage.js';
@@ -99,9 +100,15 @@ export function createBoard({ thread, listEl, formEl, renderItem, emptyHTML, sam
     const button = $('button[type=submit]', form);
     button.disabled = true;
     try {
-      await reportMessage({ id, reason: data.get('reason'), detail: String(data.get('detail') || '').trim() });
-      removeItem(id);
-      toast(t('board.reportDone'));
+      const result = await reportMessage({ id, reason: data.get('reason'), detail: String(data.get('detail') || '').trim() });
+      if (result?.hidden === true) {
+        removeItem(id);
+        toast(t('board.reportDone'));
+      } else {
+        // 管理員已確認過（keep）的留言不會被隱藏，只通知管理員
+        form.remove();
+        toast(t('board.reportKept'));
+      }
     } catch (err) {
       if (err?.code === 'not_found') removeItem(id);
       button.disabled = false;
