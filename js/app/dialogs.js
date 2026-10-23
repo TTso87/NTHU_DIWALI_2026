@@ -42,5 +42,6 @@ export function openActivity(html) {
   activityCleanup();
   activityCleanup = () => {};
   $('#activity-content').innerHTML = '<div class="activity-inner">' + html + '</div>';
-  $('#activity-dialog').showModal();
+  if (!$('#activity-dialog').open) $('#activity-dialog').showModal();
+  return $('#activity-content .activity-inner');
 }

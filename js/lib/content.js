@@ -48,7 +48,22 @@ export function validateContent(d) {
       throw Error('請檢查人物名稱與經緯度。');
     if (!Array.isArray(s.memories) || !Array.isArray(s.photos)) throw Error('人物素材格式不完整。');
   }
+  // 選填的英文版：任何物件可有 en 子物件（見 docs/TRANSLATION.md）
+  const objects = [
+    d.site,
+    ...d.stories,
+    ...d.stories.flatMap(s => [...s.memories, ...s.photos]),
+    ...d.culture,
+    ...d.quiz,
+    ...d.messages ?? [],
+  ];
+  for (const o of objects) {
+    if (o?.en !== undefined && (typeof o.en !== 'object' || o.en === null || Array.isArray(o.en)))
+      throw Error('「en」必須是物件，例如 "en": { "name": "Aarav" }。');
+  }
   for (const q of d.quiz) {
+    if (q.en?.options !== undefined && (!Array.isArray(q.en.options) || q.en.options.length !== q.options.length))
+      throw Error('問答題英文選項（en.options）的數量必須和中文選項相同。');
     if (
       !Array.isArray(q.options) ||
       q.options.length < 2 ||
@@ -62,9 +77,10 @@ export function validateContent(d) {
   return d;
 }
 
-// path 以網站根目錄（index.html 所在位置）為基準。
+// path 以網站根目錄（index.html 所在位置）為基準；任何子目錄的頁面呼叫都一樣。
+const SITE_ROOT = new URL('../../', import.meta.url);
 export async function loadJSON(path) {
-  const url = new URL(path, document.baseURI);
+  const url = new URL(path, SITE_ROOT);
   let response;
   try {
     response = await fetch(url, { cache: 'no-cache' });

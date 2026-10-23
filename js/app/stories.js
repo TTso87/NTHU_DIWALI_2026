@@ -2,21 +2,33 @@
 
 import { $, escapeHTML as e, toast } from '../lib/dom.js';
 import { safeURL } from '../lib/content.js';
+import { t } from '../i18n/index.js';
 import { createBoard, formatDate, HONEYPOT_FIELD } from '../comments/board.js';
 import { state, progress, persist } from './state.js';
 
+let currentId = '';
+
+// 目前開著的人物 ID（切換語言時用來重新開啟）
+export const openStoryId = () => ($('#story-dialog').open ? currentId : '');
+
+// 「JAIPUR · 齋浦爾」；英文模式城市名本來就是英文時只顯示一次
+export function placeLabel(s, separator) {
+  return s.cityEn && s.city && s.cityEn.toLowerCase() !== s.city.toLowerCase()
+    ? `${s.cityEn}${separator}${s.city}`
+    : s.cityEn || s.city;
+}
+
 function mediaVideo(url) {
   const u = safeURL(url);
-  if (!u)
-    return '<div class="video-placeholder"><p>訪談影片，等待入展。<br><small>可在「策展內容編輯」加入 YouTube 網址或 MP4 影片。</small></p></div>';
+  if (!u) return `<div class="video-placeholder"><p>${t('story.videoPlaceholder')}</p></div>`;
   const parsed = new URL(u);
   let vid = '';
   if (['www.youtube.com', 'youtube.com', 'm.youtube.com'].includes(parsed.hostname))
     vid = parsed.searchParams.get('v') || parsed.pathname.split('/').pop();
   if (parsed.hostname === 'youtu.be') vid = parsed.pathname.slice(1);
   if (/^[\w-]{11}$/.test(vid))
-    return `<iframe src="https://www.youtube-nocookie.com/embed/${vid}" title="人物訪談影片" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
-  return `<video controls preload="metadata" src="${e(u)}">你的瀏覽器無法播放此影片。</video>`;
+    return `<iframe src="https://www.youtube-nocookie.com/embed/${vid}" title="${e(t('story.videoTitle'))}" allow="fullscreen; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  return `<video controls preload="metadata" src="${e(u)}">${e(t('story.videoFallback'))}</video>`;
 }
 
 function gallery(photos) {
@@ -33,24 +45,25 @@ function gallery(photos) {
 
 function commentsSection(s) {
   return `<section class="story-comments">
-    <h3>想對 ${e(s.name)} 說的話</h3>
+    <h3>${e(t('story.commentsTitle', { name: s.name }))}</h3>
     <div id="story-comment-list"></div>
     <form id="story-comment-form">
-      <label>暱稱<input name="name" maxlength="24" required></label>
-      <label>留言<textarea name="message" maxlength="300" rows="3" required placeholder="這段故事讓我想到……"></textarea></label>
+      <label>${e(t('comment.nameLabel'))}<input name="name" maxlength="24" required></label>
+      <label>${e(t('comment.messageLabel'))}<textarea name="message" maxlength="300" rows="3" required placeholder="${e(t('comment.placeholder'))}"></textarea></label>
       ${HONEYPOT_FIELD}
-      <p class="storage-note">留言會立即公開，請勿留下電話、地址等個人資料。看到不當留言可按「檢舉」。</p>
-      <button class="button gold" type="submit">留下回應</button>
+      <p class="storage-note">${e(t('board.note'))}</p>
+      <button class="button gold" type="submit">${e(t('comment.submit'))}</button>
     </form>
   </section>`;
 }
 
-const saveLabel = id => (progress.saved.includes(id) ? '已收藏 · 取消收藏' : '收藏這個故事');
+const saveLabel = id => t(progress.saved.includes(id) ? 'story.saved' : 'story.save');
 
 export function openStory(id) {
   const { stories } = state.content;
   const s = stories.find(s => s.id === id);
   if (!s) return;
+  currentId = id;
   if (!progress.visited.includes(id)) {
     progress.visited.push(id);
     persist();
@@ -59,26 +72,26 @@ export function openStory(id) {
   const audio = safeURL(s.audio);
   $('#story-content').innerHTML = `
     <div class="story-head">
-      <p class="eyebrow">${e(s.cityEn)} / ${e(s.city)}</p>
-      ${s.demo ? '<span class="badge">虛構人物 · 版型示例</span>' : ''}
-      <h2>${e(s.name)} 的家鄉記憶</h2>
+      <p class="eyebrow">${e(placeLabel(s, ' / '))}</p>
+      ${s.demo ? `<span class="badge">${e(t('story.demoBadge'))}</span>` : ''}
+      <h2>${e(t('story.heading', { name: s.name }))}</h2>
       <p class="story-meta">${e(s.theme)} · ${e(s.intro)}</p>
       <blockquote>「${e(s.quote)}」</blockquote>
-      <div class="story-actions"><button class="button" id="save-story">${saveLabel(id)}</button><button class="button" id="copy-story">複製故事連結</button></div>
+      <div class="story-actions"><button class="button" id="save-story">${e(saveLabel(id))}</button><button class="button" id="copy-story">${e(t('story.copy'))}</button></div>
     </div>
     <div class="story-body">
-      ${cover ? `<img class="story-hero-image" src="${e(cover)}" alt="${e(s.name)}提供的故事照片">` : ''}
+      ${cover ? `<img class="story-hero-image" src="${e(cover)}" alt="${e(t('story.coverAlt', { name: s.name }))}">` : ''}
       ${mediaVideo(s.video)}
-      ${audio ? `<p>聽他說</p><audio controls preload="none" src="${e(audio)}"></audio>` : ''}
-      <h3>我家的排燈節</h3><p>${e(s.body)}</p>
-      <h3>打開記憶的抽屜</h3>
+      ${audio ? `<p>${e(t('story.listen'))}</p><audio controls preload="none" src="${e(audio)}"></audio>` : ''}
+      <h3>${e(t('story.sectionDiwali'))}</h3><p>${e(s.body)}</p>
+      <h3>${e(t('story.sectionMemories'))}</h3>
       <div class="memory-items">${s.memories.map(m => `<details><summary>${e(m.title)}</summary><p>${e(m.text)}</p></details>`).join('')}</div>
-      <h3>離家以後</h3><p>${e(s.taiwan)}</p>
+      <h3>${e(t('story.sectionTaiwan'))}</h3><p>${e(s.taiwan)}</p>
       ${gallery(s.photos)}
       ${commentsSection(s)}
-      <div class="story-actions"><button class="button" id="next-story">走進下一個故事</button></div>
+      <div class="story-actions"><button class="button" id="next-story">${e(t('story.next'))}</button></div>
     </div>`;
-  $('#story-dialog').showModal();
+  if (!$('#story-dialog').open) $('#story-dialog').showModal();
   $('#story-dialog').scrollTop = 0;
   history.replaceState(null, '', location.pathname + location.search + '#story/' + encodeURIComponent(id));
 
@@ -92,9 +105,9 @@ export function openStory(id) {
   $('#copy-story').onclick = async () => {
     try {
       await navigator.clipboard.writeText(location.href);
-      toast('已複製這個故事的連結');
+      toast(t('story.copied'));
     } catch {
-      toast('請從瀏覽器網址列複製連結');
+      toast(t('story.copyFail'));
     }
   };
   $('#next-story').onclick = () => openStory(stories[(stories.indexOf(s) + 1) % stories.length].id);
@@ -103,7 +116,7 @@ export function openStory(id) {
     thread: 'story:' + id,
     listEl: $('#story-comment-list'),
     formEl: $('#story-comment-form'),
-    emptyHTML: `<p class="empty-state">還沒有人留言，寫下第一句給 ${e(s.name)} 的話吧。</p>`,
+    emptyHTML: () => `<p class="empty-state">${e(t('story.commentsEmpty', { name: s.name }))}</p>`,
     renderItem: (m, report) =>
       `<article class="story-comment"><small>${e(m.name)}${m.created_at ? ' · ' + e(formatDate(m.created_at)) : ''}</small><p>${e(m.message)}</p>${report}</article>`,
   });
